@@ -37,7 +37,7 @@ function monitorSys()
 	end
 end
 
-function getAuth()
+function getAuth() --detect auth level
 	while true do
 	local authEvent, authLevel = os.pullEvent( "sysAuth" )
 	auth=authLevel
@@ -45,13 +45,13 @@ function getAuth()
 	end
 end
 
-function listenForProb()
+function listenForProb() --actively monitor for problems
 	while true do
 		if multishell.getCount()~=3 then
 			ctdn=3
 			while ctdn~=0 do
 				cX,cY=term.getCursorPos()
-				term.setCursorPos(1,cY)
+				term.setCursorPos(1,cY+1)
 				term.clearLine()
 				multishell.setFocus(debugSh)
 				print('System failure! Rebooting in '..ctdn..'...')
