@@ -20,7 +20,7 @@ runEngine=multishell.launch({}, "Engine")
 multishell.setTitle(runEngine, "Reactor Engine")
 print'Engine Active!'
 
---begin monitoring
+--active monitoring notification
 function monitorSys()
 	while true do
 		term.setCursorPos(1,7)
@@ -41,7 +41,7 @@ function getAuth() --detect auth level
 	while true do
 	local authEvent, authLevel = os.pullEvent( "sysAuth" )
 	auth=authLevel
-	sleep(.1)
+	sleep(.5)
 	end
 end
 
