@@ -1,0 +1,74 @@
+os.pullEvent = os.pullEventRaw
+term.clear()
+auth=0
+print'Welcome to the Reactor Control System v1.0.0'
+sleep(.25)
+--init tabs
+debugSh=multishell.getCurrent()
+multishell.setTitle(debugSh, "Debug")
+
+--call ui
+print'Launching UI...'
+runUI=multishell.launch({}, "UI")
+multishell.setTitle(runUI, "Reactor UI")
+multishell.setFocus(runUI)
+print'UI Active'
+
+--call engine
+print'Launching Engine...'
+runEngine=multishell.launch({}, "Engine")
+multishell.setTitle(runEngine, "Reactor Engine")
+print'Engine Active!'
+
+--begin monitoring
+function monitorSys()
+	while true do
+		term.setCursorPos(1,7)
+		print'Monitoring RCS.'
+		sleep(1)
+		term.setCursorPos(1,7)
+		print'Monitoring RCS..'
+		sleep(1)
+		term.setCursorPos(1,7)
+		print'Monitoring RCS...'
+		sleep(1)
+		term.setCursorPos(1,7)
+		term.clearLine()
+	end
+end
+
+function getAuth()
+	while true do
+	local authEvent, authLevel = os.pullEvent( "sysAuth" )
+	auth=authLevel
+	sleep(.1)
+	end
+end
+
+function listenForProb()
+	while true do
+		if multishell.getCount()~=3 then
+			ctdn=3
+			while ctdn~=0 do
+				cX,cY=term.getCursorPos()
+				term.setCursorPos(1,cY)
+				term.clearLine()
+				multishell.setFocus(debugSh)
+				print('System failure! Rebooting in '..ctdn..'...')
+				ctdn=ctdn-1
+				sleep(1)
+			end
+			os.reboot()
+		end
+		if auth==1 then
+		cX,cY=term.getCursorPos()
+		term.setCursorPos(1,cY)
+		term.clearLine()
+		print'System admin successfully logged in.'
+		auth=-1
+		end
+		sleep(1)
+	end
+end	
+
+parallel.waitForAll(monitorSys,getAuth,listenForProb)
