@@ -1,25 +1,26 @@
-os.pullEvent = os.pullEventRaw
-term.clear()
-auth=0
-print'Welcome to the Reactor Control System v1.0.0'
-sleep(.25)
---init tabs
-debugSh=multishell.getCurrent()
-multishell.setTitle(debugSh, "Debug")
+function init() --begin RCS
+	os.pullEvent = os.pullEventRaw
+	term.clear()
+	auth=0
+	print'Welcome to the Reactor Control System v1.0.0'
+	sleep(.25)
+	--init tabs
+	debugSh=multishell.getCurrent()
+	multishell.setTitle(debugSh, "Debug")
 
---call ui
-print'Launching UI...'
-runUI=multishell.launch({}, "UI")
-multishell.setTitle(runUI, "Reactor UI")
-multishell.setFocus(runUI)
-print'UI Active'
+	--call ui
+	print'Launching UI...'
+	runUI=multishell.launch({}, "UI")
+	multishell.setTitle(runUI, "Reactor UI")
+	multishell.setFocus(runUI)
+	print'UI Active'
 
---call engine
-print'Launching Engine...'
-runEngine=multishell.launch({}, "Engine")
-multishell.setTitle(runEngine, "Reactor Engine")
-print'Engine Active!'
-
+	--call engine
+	print'Launching Engine...'
+	runEngine=multishell.launch({}, "Engine")
+	multishell.setTitle(runEngine, "Reactor Engine")
+	print'Engine Active!'
+end
 --active monitoring notification
 function monitorSys()
 	while true do
@@ -47,7 +48,7 @@ end
 
 function listenForProb() --actively monitor for problems
 	while true do
-		if multishell.getCount()~=3 then
+		if multishell.getCount()~=3 then --If tab lost or gained, reboot!
 			ctdn=3
 			while ctdn~=0 do
 				cX,cY=term.getCursorPos()
@@ -60,15 +61,23 @@ function listenForProb() --actively monitor for problems
 			end
 			os.reboot()
 		end
-		if auth==1 then
+		
+		if auth==1 then --If admin logs in notify
 		cX,cY=term.getCursorPos()
 		term.setCursorPos(1,cY)
 		term.clearLine()
 		print'System admin successfully logged in.'
 		auth=-1
 		end
+		if auth==-2 then
+		cX,cY=term.getCursorPos()
+		term.setCursorPos(1,cY+1)
+		term.clearLine()
+		print'System admin successfully logged out.'
+		auth=0
+		end
 		sleep(1)
 	end
 end	
-
+init()
 parallel.waitForAll(monitorSys,getAuth,listenForProb)
