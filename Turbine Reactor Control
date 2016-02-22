@@ -1,0 +1,374 @@
+--       Big Reactor Turbine Control Program      --
+-- Awklos01 with references to Hypnotizd and Kizz -- 
+----------------------------------------------------
+local mon = {}
+local hasMon = false
+local hasRMon = false
+local rMonName = ""
+local rPort = {}
+local hasrPort = false
+local hasRrPort = false
+local RActive = false
+local tPort = {}
+local hastPort = false
+local hasTrPort = false
+local rrPortName = ""
+local trPortName = ""
+local directions = {"top", "bottom", "front", "back", "left", "right"}
+local minX = 0
+local minY = 0
+local minZ = 0
+local maxX = 0
+local maxY = 0
+local maxZ = 0
+
+------------------------------------------------------------------------ Find Peripheral Functions
+
+local function findReactor()
+	for k, v in pairs(peripheral.getNames()) do
+    if string.find(v, "Reactor_") then
+      hasrPort = true
+      hasRrPort = true
+      rrPortName = v
+      print("Found remote Reactor: "..v)
+      os.sleep(.1)
+	end
+  end
+end
+
+local function findTurbine()
+	for k, v in pairs(peripheral.getNames()) do
+    if string.find(v, "Turbine_") then
+      hastPort = true
+      hasTrPort = true
+      trPortName = v
+      print("Found remote Turbine: "..v)
+      os.sleep(.1)
+	end
+  end
+end
+
+local function findMonitor()
+	for k, v in pairs(peripheral.getNames()) do
+    if string.find(v, "monitor") then
+      hasMon = true
+      hasRMon = true
+      rMonName = v
+      print("Found remote Monitor: "..v)
+      os.sleep(.1)
+	end
+  end
+end
+	  
+local function findRrPort()
+  if hasRrPort then return end
+  for k, v in pairs(directions) do
+    local p = peripheral.wrap(v)
+    if p ~= nil then
+      if string.find(peripheral.getType(v), "Reactor") then
+        rPort = p
+        hasrPort = true
+        return
+      end
+    end
+  end
+  print("ERROR: No Reactor computer port detected!")
+end
+
+local function findTrPort()
+  if hasTrPort then return end
+  for k, v in pairs(directions) do
+    local p = peripheral.wrap(v)
+    if p ~= nil then
+      if string.find(peripheral.getType(v), "Turbine") then
+        tPort = p
+        hastPort = true
+        return
+      end
+    end
+  end
+  print("ERROR: No Turbine computer port detected!")
+end
+
+local function findMon()
+  if hasRMon then return end
+  for k, v in pairs(directions) do
+    local p = peripheral.wrap(v)
+    if p ~= nil then
+      if string.find(peripheral.getType(v), "monitor") then
+        mon = p
+        hasMon = true
+        return
+      end
+    end
+  end
+  print("WARNING: No monitor detected!")
+  os.sleep(1)
+end
+
+local function monClear()
+  if hasMon then
+    if hasRMon then
+      peripheral.call(rMonName, "setCursorPos", 1, 1)
+      peripheral.call(rMonName, "clear")
+    else
+      mon.setCursorPos(1, 1)
+      mon.clear()
+    end
+  else
+    term.clear()
+    term.setCursorPos(1, 1)
+  end
+end
+
+local function monWrite(x, y, text, text1)
+  if hasMon then
+    if hasRMon then
+      peripheral.call(rMonName, "setCursorPos", x, y)
+      peripheral.call(rMonName, "write", text)
+      peripheral.call(rMonName, "write", text1)
+    else
+      mon.setCursorPos(x, y)
+      mon.write(text)
+    end
+  else
+    term.setCursorPos(x, y)
+    term.write(text)
+  end
+end
+
+------------------------------------------------------------------------ Get Reactor Functions
+
+local function getRActive()
+  local ret = false
+  if hasRrPort then
+    ret = peripheral.call(rrPortName, "getActive")
+  end
+  return ret
+end
+
+local function getControlRodLevel()
+  local ret = 0
+  if hasRrPort then
+    ret = peripheral.call(rrPortName, "getControlRodLevel", 0)
+  end
+  return ret
+end
+
+local function getFuelTemperature()
+  local ret
+  if hasRrPort then
+    ret = peripheral.call(rrPortName, "getFuelTemperature")
+  end
+  return ret
+end
+
+------------------------------------------------------------------------ Set Reactor Functions
+
+local function setReactor(b)
+	if hasRrPort then
+      ret = peripheral.call(rrPortName, "setActive", b)
+    end
+    return ret
+end
+
+local function setControlRods(n)
+	if hasRrPort then
+      ret = peripheral.call(rrPortName, "setAllControlRodLevels", n)
+    end
+    return ret
+end
+
+------------------------------------------------------------------------ Get Turbine Functions
+
+local function getTActive()
+  local ret = false
+  if hasRrPort then
+    ret = peripheral.call(trPortName, "getActive")
+  end
+  return ret
+end
+
+local function getRotorSpeed()
+  local ret
+  if hasRrPort then
+    ret = peripheral.call(trPortName, "getRotorSpeed")
+  end
+  return ret
+end
+
+local function getEnergyProducedLastTick()
+  local ret
+  if hasRrPort then
+    ret = peripheral.call(trPortName, "getEnergyProducedLastTick")
+  end
+  return ret
+end
+
+local function getEnergyStored()
+  local ret
+  if hasRrPort then
+    ret = peripheral.call(trPortName, "getEnergyStored")
+  end
+  return ret
+end
+
+local function getInputAmount()
+  local ret
+  if hasRrPort then
+    ret = peripheral.call(trPortName, "getInputAmount")
+  end
+  return ret
+end
+
+------------------------------------------------------------------------ Set Turbine Functions
+
+local function setTurnine(b)
+	if hasRrPort then
+      ret = peripheral.call(trPortName, "setInductorEngaged", b)
+    end
+    return ret
+end
+
+local function setFluidFlowRateMax(n)
+	if hasRrPort then
+      ret = peripheral.call(trPortName, "setFluidFlowRateMax", n)
+    end
+    return ret
+end
+
+------------------------------------------------------------------------ Control Functions
+
+local function TempControl()
+  print("Temp Control Active")
+  local coreTemp = 0
+  local coreTemplast = 0
+  local energystored = 0
+  local rodLevel = 0
+  local deltatemp = 0
+  
+  while true do
+    energystored = getEnergyStored()
+    if energystored < 1000 then
+	  setReactor(true)
+	  rodLevel = getControlRodLevel()
+	  coreTemplast = coreTemp
+	  coreTemp = getFuelTemperature()
+	  deltatemp = coreTemp - coreTemplast
+	  if coreTemp >= 240 then
+	    if deltatemp > 10 then
+	      setControlRods(rodLevel+2)
+		elseif deltatemp > 0 then
+		  setControlRods(rodLevel+1)
+		end
+		os.sleep(1)
+	  elseif coreTemp < 230 then
+		setControlRods(rodLevel-1)
+		os.sleep(1)
+	  else
+	    os.sleep(1)
+	  end
+	else
+	  setReactor(false)
+	  os.sleep(1)
+	end
+  end
+end	
+
+local function CoilControl()
+  print("Coil Control Active")
+  local energystored = 0
+  local fanspeed = 0
+  local fluidin = 0
+  
+  while true do
+    os.sleep(2)
+    fluidin = getInputAmount()
+    if fluidin > 1000 then
+      fanspeed = getRotorSpeed()
+	  if fanspeed < 13450 then
+	    setTurnine(false)
+		setFluidFlowRateMax(2000)
+  	  else
+  	    setTurnine(true)
+		setFluidFlowRateMax(1918)
+	  end
+    else
+      setTurnine(false)
+	  setFluidFlowRateMax(1918)
+	end
+  end
+end
+------------------------------------------------------------------------ Process Functions
+
+local function displayInfo()
+  local coreTemp = 0
+  local rodLevel = 0
+  local fuelReactivity = 0
+  local fuelConsumed = 0
+  local steamProduced = 0
+  local energystored = 0
+  local ractive =false
+  local rotorspeed = 0
+  local energyproduced = 0
+  
+  while true do
+  if hasRrPort then
+    coreTemp = peripheral.call(rrPortName, "getFuelTemperature")
+    rodLevel = peripheral.call(rrPortName, "getControlRodLevel", 0)
+    fuelReactivity = peripheral.call(rrPortName, "getFuelReactivity")
+    fuelConsumed = peripheral.call(rrPortName, "getFuelConsumedLastTick")
+    steamProduced = peripheral.call(rrPortName, "getHotFluidProducedLastTick")
+	ractive = peripheral.call(rrPortName, "getActive")
+  end
+  
+  if hasTrPort then
+  	tactive = peripheral.call(trPortName, "getActive")
+    rotorspeed = peripheral.call(trPortName, "getRotorSpeed")
+	energyproduced = peripheral.call(trPortName, "getEnergyProducedLastTick")
+	energystored = peripheral.call(trPortName, "getEnergyStored")
+  end
+
+  
+  monClear()
+  monWrite(1, 1, "   Reactor Active: ", ractive)
+  monWrite(1, 2, "   Turbine Active: ", tactive)
+  monWrite(1, 3, "       Core Temp.: ", coreTemp)
+  monWrite(1, 4, "Control Rod Level: ", rodLevel)
+  monWrite(1, 5, "  Fuel Reactivity: ", fuelReactivity)
+  monWrite(1, 6, "  Fuel Usage/tick: ", fuelConsumed)
+  monWrite(1, 7, "   Steam Produced: ", steamProduced)
+  monWrite(1, 8, "    Energy Stored: ", energystored)
+  monWrite(1, 9, "      Rotor Speed: ", rotorspeed)
+  monWrite(1, 10, "  Energy Produced: ", energyproduced)
+  os.sleep(2)
+  end
+end
+
+local function init()
+  term.clear()
+  term.setCursorPos(1, 1)
+  print("Designed for Turbines with 80 blades, 4 Ludicrite coils, and 1918 mB of steam intake operating at 13,480rpm.")
+  findReactor()
+  findTurbine()
+  findMonitor()
+  findRrPort()
+  findTrPort()
+  findMon()
+  monClear()
+end
+
+local function garbageCollection() --reboots every 6 hours to clear threads.
+print'Garbage Collection Active...'
+sleep(21600)
+os.reboot()
+end
+
+------------------------------------------------------------------------ Initial Functions
+
+init()
+ if hasrPort == false then 
+ return 
+end
+ 
+parallel.waitForAll(displayInfo,garbageCollection,TempControl,CoilControl)
